@@ -28,7 +28,7 @@ S’appuie sur la RAG (Azure AI Search + embeddings) pour des réponses ancrées
 
 1. **Cloner le dépôt** :
    ```bash
-   git clone https://github.com/TON_COMPTE/CopilotSpotter.git
+   git clone https://github.com/Grandpied33/CopilotSpotter.git
    cd CopilotSpotter
    ```
 2. **Créer le fichier `.env`** à la racine (sans le versionner) :
