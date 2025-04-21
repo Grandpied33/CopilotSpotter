@@ -1,0 +1,12 @@
+{
+    "name": "SpotterCopilot",
+    "build": {
+      "dockerfile": "Dockerfile"
+    },
+    "postCreateCommand": "pip install -r requirements.txt",
+    "settings": {
+      "terminal.integrated.shell.linux": "/bin/bash"
+    },
+    "remoteUser": "vscode"
+  }
+  
