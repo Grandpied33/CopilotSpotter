@@ -10,7 +10,7 @@ load_dotenv()
 
 # Récupération des variables d’environnement
 endpoint = os.getenv("ENDPOINT")
-deployment = os.getenv("DEPLOYMENT")
+deployment = os.getenv("EMBEDDINGS_MODEL")
 api_key = os.getenv("SUBSCRIPTION_KEY")
 api_version = os.getenv("API_VERSION")
 search_endpoint = os.getenv("SEARCH_ENDPOINT")

@@ -42,8 +42,7 @@ while True:
                 "content": user_input,
             }
         ],
-        max_tokens=1000,
-        temperature=0.9,
+        max_completion_tokens=1000,
         top_p=1.0,
         model=deployment
     )

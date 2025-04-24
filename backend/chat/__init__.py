@@ -45,8 +45,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         response = client.chat.completions.create(
             model=os.getenv("DEPLOYMENT"),
             messages=messages,
-            temperature=0.7,
-            max_tokens=700
+            max_completion_tokens=700
         )
 
         assistant_reply = response.choices[0].message.content.strip()
