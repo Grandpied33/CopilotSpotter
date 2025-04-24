@@ -23,26 +23,39 @@
           body: JSON.stringify({ user_input: prompt })
         });
   
+        // On lit toujours le corps, même en cas d'erreur HTTP
+        const text = await response.text();
+  
         if (!response.ok) {
-          // Si le status HTTP n'est pas 2xx, on le remonte
-          throw new Error(`Erreur HTTP ${response.status} : ${response.statusText}`);
+          let errMsg = text;
+          try {
+            // si c'est du JSON { error: "..."} on récupère error
+            const obj = JSON.parse(text);
+            if (obj.error) errMsg = obj.error;
+          } catch {}
+          throw new Error(`HTTP ${response.status} : ${errMsg}`);
         }
   
-        const data = await response.json();
+        let data;
+        try {
+          data = JSON.parse(text);
+        } catch {
+          throw new Error('Le serveur a renvoyé un texte non-JSON : ' + text);
+        }
+  
         if (data.assistant_response) {
           output.textContent = data.assistant_response;
         } else {
-          // Cas où le JSON est mal formé ou ne contient pas la clé attendue
-          throw new Error('Réponse invalide du serveur : pas de champ assistant_response');
+          throw new Error('Réponse invalide du serveur : ' + JSON.stringify(data));
         }
   
       } catch (err) {
-        // Affiche le message d'erreur à l'utilisateur
-        output.textContent = `⚠️ Oups, une erreur est survenue : ${err.message}`;
+        output.textContent = `⚠️ Oups, une erreur est survenue :\n${err.message}`;
         console.error(err);
       }
     }
   </script>
+  
   
 </body>
 </html>
