@@ -9,13 +9,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Récupération des variables d’environnement
-endpoint = os.getenv("ENDPOINT")  # ex: https://ai-xxx.openai.azure.com/
-deployment = os.getenv("DEPLOYMENT")  # ex: gpt-4o-mini
+endpoint = os.getenv("ENDPOINT")
+deployment = os.getenv("DEPLOYMENT")
 api_key = os.getenv("SUBSCRIPTION_KEY")
 api_version = os.getenv("API_VERSION")
-search_endpoint = os.getenv("SEARCH_ENDPOINT")  # ex: https://nom-du-service.search.windows.net
-search_index = os.getenv("AISEARCH_INDEX_NAME")  # nom de l'index vectoriel
-search_key = os.getenv("SEARCH_API_KEY")  # clé du Azure Cognitive Search
+search_endpoint = os.getenv("SEARCH_ENDPOINT")
+search_index = os.getenv("AISEARCH_INDEX_NAME")
+search_key = os.getenv("SEARCH_API_KEY")
 
 # Initialisation des clients
 search_client = SearchClient(

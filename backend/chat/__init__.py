@@ -21,7 +21,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             return func.HttpResponse("Champ 'user_input' manquant", status_code=400)
 
         docs = retrieve_docs(user_input=user_input)
-        context = "\n\n".join([d["description"] for d in docs])
+        context = "\n\n".join([d.get("content", "") for d in docs])
 
         messages = [
             {
@@ -52,5 +52,15 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         assistant_reply = response.choices[0].message.content.strip()
         return func.HttpResponse(json.dumps({"assistant_response": assistant_reply}), mimetype="application/json")
 
+
     except Exception as e:
-        return func.HttpResponse(f"⚠️ Erreur : {str(e)}", status_code=500)
+
+        import traceback
+
+        return func.HttpResponse(
+
+            f"Erreur 500:\n{str(e)}\n\nTrace:\n{traceback.format_exc()}",
+
+            status_code=500
+
+        )
