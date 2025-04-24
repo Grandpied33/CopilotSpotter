@@ -40,4 +40,6 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         return func.HttpResponse(json.dumps({"assistant_response": answer}), mimetype="application/json")
 
     except Exception as e:
-        return func.HttpResponse(f"Erreur : {str(e)}", status_code=500)
+    print(f"🔥 ERREUR: {e}")
+    return func.HttpResponse(str(e), status_code=500)
+
