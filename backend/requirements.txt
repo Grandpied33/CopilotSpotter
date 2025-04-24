@@ -5,3 +5,4 @@ azure-identity
 azure-core
 azure-ai-projects
 azure-search-documents
+promptflow

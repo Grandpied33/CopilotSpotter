@@ -1,52 +1,58 @@
 # retrieve_docs.py
-from promptflow import tool
 import os
-from azure.identity import DefaultAzureCredential
 from azure.core.credentials import AzureKeyCredential
-from azure.ai.projects import AIProjectClient
-from azure.ai.projects.models import ConnectionType
 from azure.search.documents import SearchClient
 from azure.search.documents.models import VectorizedQuery
+from openai import AzureOpenAI
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Initialise Foundry + Search
-project = AIProjectClient.from_connection_string(
-    conn_str=os.getenv("AIPROJECT_CONNECTION_STRING"),
-    credential=DefaultAzureCredential()
-)
-conn = project.connections.get_default(
-    connection_type=ConnectionType.AZURE_AI_SEARCH,
-    include_credentials=True
-)
-search_client = SearchClient(
-    endpoint=conn.endpoint_url,
-    index_name=os.getenv("AISEARCH_INDEX_NAME"),
-    credential=AzureKeyCredential(conn.key)
-)
-embed_client = project.inference.get_embeddings_client()
+# Récupération des variables d’environnement
+endpoint = os.getenv("ENDPOINT")  # ex: https://ai-xxx.openai.azure.com/
+deployment = os.getenv("DEPLOYMENT")  # ex: gpt-4o-mini
+api_key = os.getenv("SUBSCRIPTION_KEY")
+api_version = os.getenv("API_VERSION")
+search_endpoint = os.getenv("SEARCH_ENDPOINT")  # ex: https://nom-du-service.search.windows.net
+search_index = os.getenv("AISEARCH_INDEX_NAME")  # nom de l'index vectoriel
+search_key = os.getenv("SEARCH_API_KEY")  # clé du Azure Cognitive Search
 
-@tool
+# Initialisation des clients
+search_client = SearchClient(
+    endpoint=search_endpoint,
+    index_name=search_index,
+    credential=AzureKeyCredential(search_key)
+)
+
+embed_client = AzureOpenAI(
+    api_version=api_version,
+    azure_endpoint=endpoint,
+    api_key=api_key
+)
+
 def retrieve_docs(user_input: str, top_k: int = 5) -> list:
     # Génère l’embedding de la requête
-    emb = embed_client.embed(
-        model=os.getenv("EMBEDDINGS_MODEL"),
+    embedding = embed_client.embeddings.create(
+        model=deployment,
         input=user_input
     )
-    vec = emb.data[0].embedding
+    vec = embedding.data[0].embedding
 
-    # Lance la recherche vectorielle
+    # Recherche vectorielle dans Azure Search
     vq = VectorizedQuery(vector=vec, k_nearest_neighbors=top_k, fields="contentVector")
-    results = search_client.search(search_text="", vector_queries=[vq],
-                                   select=["nom", "groupe_musculaire", "description", "objectif"])
-    # Formate le résultat
+    results = search_client.search(
+        search_text="",
+        vector_queries=[vq],
+        select=["content", "title", "filepath", "url"],
+    )
+
+    # Formate les résultats
     docs = []
     for r in results:
         docs.append({
-            "nom": r["nom"],
-            "groupe_musculaire": r["groupe_musculaire"],
-            "objectif": r["objectif"],
-            "description": r["description"]
+            "title": r.get("title", ""),
+            "filepath": r.get("filepath", ""),
+            "url": r.get("url", ""),
+            "content": r.get("content", "")
         })
     return docs
