@@ -5,3 +5,5 @@ openai
 python-dotenv
 promptflow
 azure-search-documents
+azure-functions
+azure-core
