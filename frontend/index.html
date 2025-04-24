@@ -14,7 +14,7 @@
     async function ask(){
       const prompt = document.getElementById('prompt').value;
       document.getElementById('res').textContent = 'Chargement…';
-      const r = await fetch('/api/chat', {
+      const r = await fetch('/api/ChatFunction', {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ user_input: prompt })
       });
