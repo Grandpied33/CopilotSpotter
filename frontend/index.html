@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>SpotterCopilot</title>
+  <style>body{font-family:sans-serif;max-width:600px;margin:2rem auto;}textarea{width:100%;height:5rem;}#res{white-space:pre-wrap;margin-top:1rem;}</style>
+</head>
+<body>
+  <h1>SpotterCopilot</h1>
+  <textarea id="prompt" placeholder="Pose ta question…"></textarea>
+  <button onclick="ask()">Envoyer</button>
+  <div id="res"></div>
+  <script>
+    async function ask(){
+      const prompt = document.getElementById('prompt').value;
+      document.getElementById('res').textContent = 'Chargement…';
+      const r = await fetch('/api/chat', {
+        method:'POST', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ user_input: prompt })
+      });
+      const j = await r.json();
+      document.getElementById('res').textContent = j.assistant_response;
+    }
+  </script>
+</body>
+</html>
