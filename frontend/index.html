@@ -11,16 +11,38 @@
   <button onclick="ask()">Envoyer</button>
   <div id="res"></div>
   <script>
-    async function ask(){
+    async function ask() {
       const prompt = document.getElementById('prompt').value;
-      document.getElementById('res').textContent = 'Chargement…';
-      const r = await fetch('/api/ChatFunction', {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ user_input: prompt })
-      });
-      const j = await r.json();
-      document.getElementById('res').textContent = j.assistant_response;
+      const output = document.getElementById('res');
+      output.textContent = 'Chargement…';
+  
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_input: prompt })
+        });
+  
+        if (!response.ok) {
+          // Si le status HTTP n'est pas 2xx, on le remonte
+          throw new Error(`Erreur HTTP ${response.status} : ${response.statusText}`);
+        }
+  
+        const data = await response.json();
+        if (data.assistant_response) {
+          output.textContent = data.assistant_response;
+        } else {
+          // Cas où le JSON est mal formé ou ne contient pas la clé attendue
+          throw new Error('Réponse invalide du serveur : pas de champ assistant_response');
+        }
+  
+      } catch (err) {
+        // Affiche le message d'erreur à l'utilisateur
+        output.textContent = `⚠️ Oups, une erreur est survenue : ${err.message}`;
+        console.error(err);
+      }
     }
   </script>
+  
 </body>
 </html>
