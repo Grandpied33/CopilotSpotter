@@ -7,3 +7,4 @@ promptflow
 azure-search-documents
 azure-functions
 azure-core
+azure-data-tables

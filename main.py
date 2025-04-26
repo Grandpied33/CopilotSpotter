@@ -17,6 +17,9 @@ client = AzureOpenAI(
 
 print("🏋️ SpotterCopilot est prêt. Tape ce que tu veux bosser aujourd'hui ('exit' pour quitter)\n")
 
+table_service = TableServiceClient.from_connection_string(os.getenv("AZURE_TABLE_CONN"))
+table = table_service.get_table_client(table_name="UserProgress")
+
 while True:
     user_input = input("🧑 > ")
     if user_input.lower() in ["exit", "quit"]:

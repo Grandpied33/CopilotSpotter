@@ -1,7 +1,6 @@
 # chat/__init__.py
 import os
 import json
-import traceback
 import logging
 
 import azure.functions as func
@@ -17,10 +16,28 @@ client = AzureOpenAI(
     api_version=os.getenv("API_VERSION")
 )
 
+SYSTEM_PROMPT = """
+Tu es SpotterCopilot, un coach IA expert en musculation.
+Quand l’utilisateur demande un entraînement (ex. “je veux m’entraîner les bras”), tu dois :
+1) Lui demander son état de forme du jour (en forme / normal / fatigué).
+2) Lui demander la durée dont il dispose pour sa séance (en minutes).
+3) Proposer un programme détaillé adapté (exercices, séries, répétitions, charges estimées, repos).
+4) **Une fois le programme envoyé**, inviter l’utilisateur à faire son retour de séance en lui demandant :
+   - Pour chaque exercice, combien de séries as-tu fait ?
+   - Combien de répétitions ?
+   - À quel poids pour chaque série ?
+   - Comment tu t’es senti (facile / difficile) ?
+Ce retour servira à optimiser ses prochaines séances.
+Répond toujours au format JSON avec au moins les clés `"programme"` (liste d’exos) et `"next_step"` qui contiendra ta question de suivi.
+"""
+
+
 def main(req: func.HttpRequest) -> func.HttpResponse:
     try:
-        body = req.get_json()
+        body       = req.get_json()
         user_input = body.get("user_input", "").strip()
+        memory     = body.get("memory", "").strip()
+
         if not user_input:
             return func.HttpResponse(
                 json.dumps({"error": "Champ 'user_input' manquant"}),
@@ -28,28 +45,23 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 mimetype="application/json"
             )
 
-        docs = retrieve_docs(user_input)
+        # 1) récupération des docs (RAG)
+        docs    = retrieve_docs(user_input)
         context = "\n\n".join(d.get("content", "") for d in docs)
 
+        # 2) construction du prompt complet
+        full_system = SYSTEM_PROMPT
+        if memory:
+            full_system += "\nHistorique des poids :\n" + memory
+        if context:
+            full_system += "\n\nContexte additionnel :\n" + context
+
         messages = [
-            {
-                "role": "system",
-                "content": (
-                    "Tu es SpotterCopilot, un assistant intelligent d’entraînement sportif. "
-                    "Tu aides l’utilisateur à planifier ses séances de musculation. "
-                    "Tu proposes des exercices précis (avec reps, séries, charges estimées) en fonction du groupe musculaire ciblé, "
-                    "de l’objectif (force, volume, endurance), et de l’état du jour (fatigué, normal, en forme). "
-                    "**Tu ne réponds qu’à des sujets liés au sport, à la forme physique et à la santé.** "
-                    "Si une question sort de ce cadre (informatique, météo, relations, actu…), tu dois répondre poliment que tu ne peux pas aider sur ce sujet."
-                    "Sois clair, structuré, efficace."
-                )
-            },
-            {
-                "role": "user",
-                "content": user_input
-            }
+            {"role": "system", "content": full_system},
+            {"role": "user",   "content": user_input}
         ]
 
+        # 3) appel OpenAI
         resp = client.chat.completions.create(
             model=os.getenv("DEPLOYMENT"),
             messages=messages,
