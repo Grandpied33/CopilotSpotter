@@ -22,21 +22,35 @@ Quand l’utilisateur demande un entraînement (ex. “je veux m’entraîner le
 1) Lui demander son état de forme du jour (en forme / normal / fatigué).
 2) Lui demander la durée dont il dispose pour sa séance (en minutes).
 3) Proposer un programme détaillé adapté (exercices, séries, répétitions, charges estimées, repos).
-4) **Une fois le programme envoyé**, inviter l’utilisateur à faire son retour de séance en lui demandant :
+4) Une fois le programme envoyé, inviter l’utilisateur à faire son retour de séance en lui demandant :
    - Pour chaque exercice, combien de séries as-tu fait ?
    - Combien de répétitions ?
    - À quel poids pour chaque série ?
    - Comment tu t’es senti (facile / difficile) ?
-Ce retour servira à optimiser ses prochaines séances.
-Répond toujours au format JSON avec au moins les clés `"programme"` (liste d’exos) et `"next_step"` qui contiendra ta question de suivi.
+Répond toujours au format JSON avec au moins les clés "programme" (liste d’exos) et "next_step" (phrase de suivi).
 """
 
+FB_PROMPT = """
+Tu es SpotterCopilot.
+L’utilisateur t’a renvoyé son feedback de séance sous forme :
+Exercice A : 4 séries de 10 @ 22kg (difficile)
+Exercice B : 3 séries de 12 @ 14kg (facile)
+Lis ce feedback et renvoie un JSON :
+{
+  "feedback_ack": "<message d’encouragement>",
+  "adjustments": {
+    "Exercice A": {"ajustement": "+2kg", "nouveau_target": "10-12"},
+    "Exercice B": {"ajustement": "-2kg", "nouveau_target": "12-15"}
+  }
+}
+"""
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     try:
-        body       = req.get_json()
-        user_input = body.get("user_input", "").strip()
-        memory     = body.get("memory", "").strip()
+        body        = req.get_json()
+        user_input  = body.get("user_input", "").strip()
+        memory      = body.get("memory", "").strip()
+        is_feedback = body.get("feedback", False)
 
         if not user_input:
             return func.HttpResponse(
@@ -45,28 +59,29 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 mimetype="application/json"
             )
 
-        # 1) récupération des docs (RAG)
-        docs    = retrieve_docs(user_input)
-        context = "\n\n".join(d.get("content", "") for d in docs)
+        if not is_feedback:
+            docs    = retrieve_docs(user_input)
+            context = "\n\n".join(d.get("content", "") for d in docs)
 
-        # 2) construction du prompt complet
-        full_system = SYSTEM_PROMPT
-        if memory:
-            full_system += "\nHistorique des poids :\n" + memory
-        if context:
-            full_system += "\n\nContexte additionnel :\n" + context
+            prompt = SYSTEM_PROMPT
+            if memory:
+                prompt += "\nHistorique des poids :\n" + memory
+            if context:
+                prompt += "\n\nContexte additionnel :\n" + context
+
+        else:
+            prompt = FB_PROMPT + "\nFeedback reçu :\n" + user_input
 
         messages = [
-            {"role": "system", "content": full_system},
+            {"role": "system", "content": prompt},
             {"role": "user",   "content": user_input}
         ]
 
-        # 3) appel OpenAI
         resp = client.chat.completions.create(
             model=os.getenv("DEPLOYMENT"),
             messages=messages,
             top_p=1.0,
-            max_completion_tokens=2000
+            max_completion_tokens=2000 if not is_feedback else 500
         )
         answer = resp.choices[0].message.content.strip()
 

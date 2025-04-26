@@ -1,14 +1,13 @@
-// Récupération / initialisation de l'historique
 let history = JSON.parse(localStorage.getItem('spotter_history') || '{}');
 function saveHistory() {
   localStorage.setItem('spotter_history', JSON.stringify(history));
 }
-
-const intro    = document.getElementById('intro');
-const chat     = document.getElementById('chat');
+const intro = document.getElementById('intro');
+const chat = document.getElementById('chat');
 const promptEl = document.getElementById('prompt');
-const sendBtn  = document.getElementById('send');
-const wrapper  = document.getElementById('wrapper');
+const sendBtn = document.getElementById('send');
+const wrapper = document.getElementById('wrapper');
+let mode = 'program';
 let loaderElem, repInterval;
 
 function explodeIntro() {
@@ -23,11 +22,11 @@ function explodeIntro() {
   });
   requestAnimationFrame(() =>
     chars.forEach(s => {
-      const dx  = (Math.random() - 0.5) * 200;
-      const dy  = (Math.random() - 0.5) * 200;
+      const dx = (Math.random() - 0.5) * 200;
+      const dy = (Math.random() - 0.5) * 200;
       const rot = (Math.random() - 0.5) * 720;
       s.style.transform = `translate(${dx}px,${dy}px) rotate(${rot}deg)`;
-      s.style.opacity   = '0';
+      s.style.opacity = '0';
     })
   );
   setTimeout(() => intro.style.display = 'none', 800);
@@ -35,10 +34,7 @@ function explodeIntro() {
 
 function pumpMuscle() {
   wrapper.classList.add('pump');
-  wrapper.addEventListener('animationend',
-    () => wrapper.classList.remove('pump'),
-    { once: true }
-  );
+  wrapper.addEventListener('animationend', () => wrapper.classList.remove('pump'), { once: true });
 }
 
 function showRepLoader() {
@@ -72,26 +68,18 @@ async function ask() {
   const q = promptEl.value.trim();
   if (!q) return;
 
-  // Préparation du contexte mémoire
   const memText = Object.entries(history)
     .map(([exo, wt]) => `- ${exo} : ${wt} kg`)
     .join('\n') || 'Aucune donnée historique.';
 
-  // Easter-eggs
   if (q.toLowerCase() === 'qui est ton créateur ?') {
     promptEl.value = '';
-    addBubble(
-      '🤖 Mon créateur, c’est Hugo, développeur web passionné et coach musculation amateur !',
-      'assistant'
-    );
+    addBubble('🤖 Mon créateur, c’est Hugo, développeur web passionné et coach musculation amateur !', 'assistant');
     return;
   }
   if (q.toLowerCase() === 'quel est mon métier ?') {
     promptEl.value = '';
-    addBubble(
-      '💼 Toi, c’est Hugo – développeur web qui code des apps et soulève de la fonte !',
-      'assistant'
-    );
+    addBubble('💼 Toi, c’est Hugo – développeur web qui code des apps et soulève de la fonte !', 'assistant');
     return;
   }
 
@@ -101,14 +89,14 @@ async function ask() {
   addBubble(q, 'user');
   showRepLoader();
 
+  const payload = { user_input: q, memory: memText };
+  if (mode === 'feedback') payload.feedback = true;
+
   try {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        user_input: q,
-        memory: memText
-      })
+      body: JSON.stringify(payload)
     });
     const data = await res.json();
     hideRepLoader();
@@ -119,16 +107,29 @@ async function ask() {
 
     addBubble(ai, 'assistant');
 
-    // Mise à jour de l'historique si l'IA renvoie un JSON contenant "weights"
-    try {
-      const parsed = JSON.parse(ai);
-      const weights = parsed.weights;
-      if (weights && typeof weights === 'object') {
-        Object.assign(history, weights);
+    let parsed = null;
+    try { parsed = JSON.parse(ai); } catch {}
+
+    if (mode === 'program') {
+      if (parsed && parsed.weights) {
+        Object.assign(history, parsed.weights);
         saveHistory();
       }
-    } catch {}
-
+      if (parsed && parsed.next_step) {
+        addBubble(parsed.next_step, 'assistant');
+        mode = 'feedback';
+      }
+    } else if (mode === 'feedback') {
+      if (parsed && parsed.feedback_ack) {
+        addBubble(parsed.feedback_ack, 'assistant');
+      }
+      if (parsed && parsed.adjustments) {
+        for (const [exo, adj] of Object.entries(parsed.adjustments)) {
+          addBubble(`${exo} → ${adj.ajustement}, cible ${adj.nouveau_target}`, 'assistant');
+        }
+        mode = 'program';
+      }
+    }
   } catch {
     hideRepLoader();
     addBubble('⚠️ Connexion échouée', 'assistant');
