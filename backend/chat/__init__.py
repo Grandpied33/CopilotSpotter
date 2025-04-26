@@ -1,8 +1,4 @@
-# chat/__init__.py
-import os
-import json
-import logging
-
+import os, json, logging
 import azure.functions as func
 from openai import AzureOpenAI
 from dotenv import load_dotenv
@@ -11,9 +7,9 @@ from .retrieve_docs import retrieve_docs
 load_dotenv()
 
 client = AzureOpenAI(
-    api_key=os.getenv("SUBSCRIPTION_KEY"),
-    azure_endpoint=os.getenv("ENDPOINT"),
-    api_version=os.getenv("API_VERSION")
+    api_key        = os.getenv("SUBSCRIPTION_KEY"),
+    azure_endpoint = os.getenv("ENDPOINT"),
+    api_version    = os.getenv("API_VERSION")
 )
 
 SYSTEM_PROMPT = """
@@ -55,11 +51,11 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         if not user_input:
             return func.HttpResponse(
                 json.dumps({"error": "Champ 'user_input' manquant"}),
-                status_code=400,
-                mimetype="application/json"
+                status_code=400, mimetype="application/json"
             )
 
         if not is_feedback:
+            # 1) Récupération des docs (RAG) et construction du prompt
             docs    = retrieve_docs(user_input)
             context = "\n\n".join(d.get("content", "") for d in docs)
 
@@ -69,32 +65,32 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             if context:
                 prompt += "\n\nContexte additionnel :\n" + context
 
+            max_tokens = 2000
         else:
-            prompt = FB_PROMPT + "\nFeedback reçu :\n" + user_input
+            # 2) Mode feedback
+            prompt     = FB_PROMPT + "\nFeedback reçu :\n" + user_input
+            max_tokens = 500
 
-        messages = [
-            {"role": "system", "content": prompt},
-            {"role": "user",   "content": user_input}
-        ]
-
+        # 3) Appel OpenAI
         resp = client.chat.completions.create(
-            model=os.getenv("DEPLOYMENT"),
-            messages=messages,
-            top_p=1.0,
-            max_completion_tokens=2000 if not is_feedback else 500
+            model                  = os.getenv("DEPLOYMENT"),
+            messages               = [
+                {"role": "system", "content": prompt},
+                {"role": "user",   "content": user_input}
+            ],
+            top_p                  = 1.0,
+            max_completion_tokens  = max_tokens
         )
         answer = resp.choices[0].message.content.strip()
 
         return func.HttpResponse(
             json.dumps({"assistant_response": answer}),
-            status_code=200,
-            mimetype="application/json"
+            status_code=200, mimetype="application/json"
         )
 
     except Exception:
         logging.exception("Erreur inattendue dans SpotterCopilot")
         return func.HttpResponse(
             json.dumps({"error": "Une erreur interne est survenue."}),
-            status_code=500,
-            mimetype="application/json"
+            status_code=500, mimetype="application/json"
         )
