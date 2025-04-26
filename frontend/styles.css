@@ -134,6 +134,14 @@
     font-size:1rem;
     resize:none;
     height:2.5rem;
+    overflow: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    font-family: "Segoe UI",sans-serif;
+    font-size: 1rem;
+    line-height: 1.4;
+    font-weight: 1.4;
+    letter-spacing: 0.02em;
   }
   .input-area button {
     background:var(--user);
@@ -148,3 +156,6 @@
     opacity:0.5; cursor:default;
   }
   
+  .input-area textarea::-webkit-scrollbar {
+    display: none;
+  }
