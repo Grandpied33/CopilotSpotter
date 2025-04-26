@@ -3,59 +3,102 @@
 <head>
   <meta charset="UTF-8">
   <title>SpotterCopilot</title>
-  <style>body{font-family:sans-serif;max-width:600px;margin:2rem auto;}textarea{width:100%;height:5rem;}#res{white-space:pre-wrap;margin-top:1rem;}</style>
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <h1>SpotterCopilot</h1>
-  <textarea id="prompt" placeholder="Pose ta question…"></textarea>
-  <button onclick="ask()">Envoyer</button>
-  <div id="res"></div>
+  <div class="main-container">
+    <div class="chat-box">
+      <div id="intro">
+        Bonjour Hugo, quel sujet devrions-nous aborder aujourd'hui ?
+      </div>
+      <div class="chat-container" id="chat">
+        <!-- bulles injectées ici -->
+      </div>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <textarea id="prompt" placeholder="Message Copilot"></textarea>
+    <button id="send">Envoyer</button>
+  </div>
+
   <script>
-    async function ask() {
-      const prompt = document.getElementById('prompt').value;
-      const output = document.getElementById('res');
-      output.textContent = 'Chargement…';
-  
-      try {
-        const response = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ user_input: prompt })
+    const intro   = document.getElementById('intro');
+    const chat    = document.getElementById('chat');
+    const promptEl= document.getElementById('prompt');
+    const sendBtn = document.getElementById('send');
+
+    function explodeIntro() {
+      const el   = intro;
+      const text = el.textContent;
+      el.textContent = '';
+      const chars = Array.from(text).map(ch => {
+        const span = document.createElement('span');
+        span.textContent = ch;
+        span.style.transition = 'transform 0.8s ease-out, opacity 0.8s ease-out';
+        el.appendChild(span);
+        return span;
+      });
+      requestAnimationFrame(() => {
+        chars.forEach(s => {
+          const dx  = (Math.random()-0.5)*200;
+          const dy  = (Math.random()-0.5)*200;
+          const rot = (Math.random()-0.5)*720;
+          s.style.transform = `translate(${dx}px,${dy}px) rotate(${rot}deg)`;
+          s.style.opacity   = '0';
         });
-  
-        // On lit toujours le corps, même en cas d'erreur HTTP
-        const text = await response.text();
-  
-        if (!response.ok) {
-          let errMsg = text;
-          try {
-            // si c'est du JSON { error: "..."} on récupère error
-            const obj = JSON.parse(text);
-            if (obj.error) errMsg = obj.error;
-          } catch {}
-          throw new Error(`HTTP ${response.status} : ${errMsg}`);
-        }
-  
-        let data;
-        try {
-          data = JSON.parse(text);
-        } catch {
-          throw new Error('Le serveur a renvoyé un texte non-JSON : ' + text);
-        }
-  
-        if (data.assistant_response) {
-          output.textContent = data.assistant_response;
+      });
+      setTimeout(() => el.style.display = 'none', 800);
+    }
+
+    function addBubble(text, who) {
+      if (intro && intro.style.display !== 'none') explodeIntro();
+
+      const div = document.createElement('div');
+      div.className = `bubble ${who} incoming`;
+      div.textContent = text;
+      chat.appendChild(div);
+
+      requestAnimationFrame(() => {
+        div.classList.remove('incoming');
+        chat.scrollTop = chat.scrollHeight;
+      });
+    }
+
+    async function ask() {
+      const q = promptEl.value.trim();
+      if (!q) return;
+      addBubble(q, 'user');
+      promptEl.value = '';
+      sendBtn.disabled = true;
+
+      try {
+        const res  = await fetch('/api/chat', {
+          method: 'POST',
+          headers: {'Content-Type':'application/json'},
+          body: JSON.stringify({user_input: q})
+        });
+        const data = await res.json();
+        if (res.ok && data.assistant_response) {
+          addBubble(data.assistant_response, 'assistant');
         } else {
-          throw new Error('Réponse invalide du serveur : ' + JSON.stringify(data));
+          addBubble(`⚠️ ${data.error||res.status}`, 'assistant');
         }
-  
-      } catch (err) {
-        output.textContent = `⚠️ Oups, une erreur est survenue :\n${err.message}`;
-        console.error(err);
+      } catch {
+        addBubble('⚠️ Connexion échouée', 'assistant');
+      } finally {
+        sendBtn.disabled = false;
+        promptEl.focus();
       }
     }
+
+    sendBtn.addEventListener('click', ask);
+    promptEl.addEventListener('keydown', e => {
+      if (e.key==='Enter' && !e.shiftKey) {
+        e.preventDefault();
+        ask();
+      }
+    });
   </script>
-  
-  
 </body>
 </html>

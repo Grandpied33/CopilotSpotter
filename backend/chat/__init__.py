@@ -37,11 +37,10 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 "content": (
                     "Tu es SpotterCopilot, un assistant intelligent d’entraînement sportif. "
                     "Tu aides l’utilisateur à planifier ses séances de musculation. "
-                    "Tu proposes des exercices précis (avec reps, séries, charges estimées) en fonction "
-                    "du groupe musculaire ciblé, de l’objectif (force, volume, endurance), "
-                    "et de l’état du jour (fatigué, normal, en forme). "
+                    "Tu proposes des exercices précis (avec reps, séries, charges estimées) en fonction du groupe musculaire ciblé, "
+                    "de l’objectif (force, volume, endurance), et de l’état du jour (fatigué, normal, en forme). "
                     "**Tu ne réponds qu’à des sujets liés au sport, à la forme physique et à la santé.** "
-                    "Si une question sort de ce cadre, répond poliment que tu ne peux pas aider sur ce sujet. "
+                    "Si une question sort de ce cadre (informatique, météo, relations, actu…), tu dois répondre poliment que tu ne peux pas aider sur ce sujet."
                     "Sois clair, structuré, efficace."
                 )
             },
@@ -55,7 +54,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             model=os.getenv("DEPLOYMENT"),
             messages=messages,
             top_p=1.0,
-            max_completion_tokens=1000
+            max_completion_tokens=2000
         )
         answer = resp.choices[0].message.content.strip()
 
@@ -65,12 +64,10 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             mimetype="application/json"
         )
 
-    except Exception as e:
-        tb = traceback.format_exc()
-        logging.error(tb)
-        payload = {"error": str(e), "trace": tb}
-        return func.HttpResponse(
-            json.dumps(payload),
-            status_code=500,
-            mimetype="application/json"
-        )
+    except Exception:
+    logging.exception("Erreur inattendue dans SpotterCopilot")
+    return func.HttpResponse(
+        json.dumps({"error": "Une erreur interne est survenue."}),
+        status_code=500,
+        mimetype="application/json"
+    )
