@@ -101,34 +101,18 @@ async function ask() {
     const data = await res.json();
     hideRepLoader();
 
-    const ai = res.ok && data.assistant_response
-      ? data.assistant_response
-      : `⚠️ ${data.error || res.status}`;
+    if (!res.ok) {
+      addBubble(`⚠️ HTTP ${res.status} – ${data.error||'Erreur'}`, 'assistant');
+      return;
+    }
 
+    const ai = data.assistant_response || '🤖 Aucun retour de l’IA.';
     addBubble(ai, 'assistant');
 
-    let parsed = null;
-    try { parsed = JSON.parse(ai); } catch {}
-
     if (mode === 'program') {
-      if (parsed && parsed.weights) {
-        Object.assign(history, parsed.weights);
-        saveHistory();
-      }
-      if (parsed && parsed.next_step) {
-        addBubble(parsed.next_step, 'assistant');
-        mode = 'feedback';
-      }
-    } else if (mode === 'feedback') {
-      if (parsed && parsed.feedback_ack) {
-        addBubble(parsed.feedback_ack, 'assistant');
-      }
-      if (parsed && parsed.adjustments) {
-        for (const [exo, adj] of Object.entries(parsed.adjustments)) {
-          addBubble(`${exo} → ${adj.ajustement}, cible ${adj.nouveau_target}`, 'assistant');
-        }
-        mode = 'program';
-      }
+      mode = 'feedback';
+    } else {
+      mode = 'program';
     }
   } catch {
     hideRepLoader();

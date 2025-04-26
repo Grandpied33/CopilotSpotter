@@ -1,3 +1,4 @@
+# chat/__init__.py
 import os, json, logging
 import azure.functions as func
 from openai import AzureOpenAI
@@ -12,74 +13,62 @@ client = AzureOpenAI(
     api_version    = os.getenv("API_VERSION")
 )
 
-SYSTEM_PROMPT = """
-Tu es SpotterCopilot, un coach IA expert en musculation.
-Quand l’utilisateur demande un entraînement (ex. “je veux m’entraîner les bras”), tu dois :
-1) Lui demander son état de forme du jour (en forme / normal / fatigué).
-2) Lui demander la durée dont il dispose pour sa séance (en minutes).
-3) Proposer un programme détaillé adapté (exercices, séries, répétitions, charges estimées, repos).
-4) Une fois le programme envoyé, inviter l’utilisateur à faire son retour de séance en lui demandant :
-   - Pour chaque exercice, combien de séries as-tu fait ?
-   - Combien de répétitions ?
-   - À quel poids pour chaque série ?
-   - Comment tu t’es senti (facile / difficile) ?
-Répond toujours au format JSON avec au moins les clés "programme" (liste d’exos) et "next_step" (phrase de suivi).
+SYSTEM_PROMPT_PROGRAM = """
+Tu es SpotterCopilot, coach IA expert en musculation.
+Quand l’utilisateur demande un entraînement (par ex. “je veux m’entraîner les bras”), tu dois :
+1) Demander son état de forme (en forme / normal / fatigué).
+2) Demander la durée dont il dispose.
+3) Proposer un programme clair et détaillé :
+   - Exercice : Squat
+     Séries : 4
+     Répétitions : 8–10
+     Charge : 60 kg
+     Repos : 120 s
+Puis termine par : « Dis-moi quand tu as fini ta séance ! »
 """
 
-FB_PROMPT = """
+SYSTEM_PROMPT_FEEDBACK = """
 Tu es SpotterCopilot.
-L’utilisateur t’a renvoyé son feedback de séance sous forme :
-Exercice A : 4 séries de 10 @ 22kg (difficile)
-Exercice B : 3 séries de 12 @ 14kg (facile)
-Lis ce feedback et renvoie un JSON :
-{
-  "feedback_ack": "<message d’encouragement>",
-  "adjustments": {
-    "Exercice A": {"ajustement": "+2kg", "nouveau_target": "10-12"},
-    "Exercice B": {"ajustement": "-2kg", "nouveau_target": "12-15"}
-  }
-}
+L’utilisateur vient de terminer sa séance et te donne son feedback, par ex. :
+« Squat : 4×10 @ 60 kg — difficile  
+Presse : 3×12 @ 80 kg — facile »
+Analyse ce feedback et propose en texte clair comment ajuster les charges la prochaine fois.
 """
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     try:
         body        = req.get_json()
-        user_input  = body.get("user_input", "").strip()
-        memory      = body.get("memory", "").strip()
+        user_input  = body.get("user_input","").strip()
+        memory      = body.get("memory","").strip()
         is_feedback = body.get("feedback", False)
 
         if not user_input:
             return func.HttpResponse(
-                json.dumps({"error": "Champ 'user_input' manquant"}),
+                json.dumps({"error":"Champ 'user_input' manquant"}),
                 status_code=400, mimetype="application/json"
             )
 
         if not is_feedback:
-            # 1) Récupération des docs (RAG) et construction du prompt
             docs    = retrieve_docs(user_input)
-            context = "\n\n".join(d.get("content", "") for d in docs)
-
-            prompt = SYSTEM_PROMPT
+            context = "\n\n".join(d.get("content","") for d in docs)
+            prompt = SYSTEM_PROMPT_PROGRAM
             if memory:
                 prompt += "\nHistorique des poids :\n" + memory
             if context:
-                prompt += "\n\nContexte additionnel :\n" + context
-
+                prompt += "\n\nContexte :\n" + context
             max_tokens = 2000
         else:
-            # 2) Mode feedback
-            prompt     = FB_PROMPT + "\nFeedback reçu :\n" + user_input
+            prompt = SYSTEM_PROMPT_FEEDBACK + "\nFeedback :\n" + user_input
             max_tokens = 500
 
-        # 3) Appel OpenAI
         resp = client.chat.completions.create(
-            model                  = os.getenv("DEPLOYMENT"),
-            messages               = [
-                {"role": "system", "content": prompt},
-                {"role": "user",   "content": user_input}
+            model                 = os.getenv("DEPLOYMENT"),
+            messages              = [
+                {"role":"system","content":prompt},
+                {"role":"user","content":user_input}
             ],
-            top_p                  = 1.0,
-            max_completion_tokens  = max_tokens
+            top_p                 = 1.0,
+            max_completion_tokens = max_tokens
         )
         answer = resp.choices[0].message.content.strip()
 
@@ -89,8 +78,8 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         )
 
     except Exception:
-        logging.exception("Erreur inattendue dans SpotterCopilot")
+        logging.exception("Erreur inattendue")
         return func.HttpResponse(
-            json.dumps({"error": "Une erreur interne est survenue."}),
+            json.dumps({"error":"Erreur interne."}),
             status_code=500, mimetype="application/json"
         )
