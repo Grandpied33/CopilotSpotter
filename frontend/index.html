@@ -23,68 +23,95 @@
   </div>
 
   <script>
-    const intro   = document.getElementById('intro');
-    const chat    = document.getElementById('chat');
-    const promptEl= document.getElementById('prompt');
-    const sendBtn = document.getElementById('send');
+    const intro    = document.getElementById('intro');
+    const chat     = document.getElementById('chat');
+    const promptEl = document.getElementById('prompt');
+    const sendBtn  = document.getElementById('send');
+    let loaderElem = null;
 
+    // Explosion du texte d'intro
     function explodeIntro() {
-      const el   = intro;
-      const text = el.textContent;
-      el.textContent = '';
+      const text = intro.textContent;
+      intro.textContent = '';
       const chars = Array.from(text).map(ch => {
         const span = document.createElement('span');
         span.textContent = ch;
         span.style.transition = 'transform 0.8s ease-out, opacity 0.8s ease-out';
-        el.appendChild(span);
+        intro.appendChild(span);
         return span;
       });
       requestAnimationFrame(() => {
         chars.forEach(s => {
-          const dx  = (Math.random()-0.5)*200;
-          const dy  = (Math.random()-0.5)*200;
-          const rot = (Math.random()-0.5)*720;
+          const dx  = (Math.random() - 0.5) * 200;
+          const dy  = (Math.random() - 0.5) * 200;
+          const rot = (Math.random() - 0.5) * 720;
           s.style.transform = `translate(${dx}px,${dy}px) rotate(${rot}deg)`;
           s.style.opacity   = '0';
         });
       });
-      setTimeout(() => el.style.display = 'none', 800);
+      setTimeout(() => intro.style.display = 'none', 800);
     }
 
-    function addBubble(text, who) {
-      if (intro && intro.style.display !== 'none') explodeIntro();
+    // Affiche le loader animé
+    function showLoader() {
+      loaderElem = document.createElement('div');
+      loaderElem.className = 'loader';
+      ['🏋️‍♂️','🤾‍♂️','🏌️‍♂️','🏃‍♂️'].forEach((emoji,i) => {
+        const span = document.createElement('span');
+        span.textContent = emoji;
+        span.style.animationDelay = `${i * 0.25}s`;
+        loaderElem.appendChild(span);
+      });
+      chat.appendChild(loaderElem);
+      chat.scrollTop = chat.scrollHeight;
+    }
 
+    // Masque le loader
+    function hideLoader() {
+      if (loaderElem) {
+        loaderElem.remove();
+        loaderElem = null;
+      }
+    }
+
+    // Injecte une bulle dans le chat
+    function addBubble(text, who) {
+      const isFirst = intro && intro.style.display !== 'none';
+      if (isFirst) explodeIntro();
       const div = document.createElement('div');
-      div.className = `bubble ${who} incoming`;
+      div.className = `bubble ${who}`;
       div.textContent = text;
       chat.appendChild(div);
-
-      requestAnimationFrame(() => {
-        div.classList.remove('incoming');
-        chat.scrollTop = chat.scrollHeight;
-      });
+      chat.scrollTop = chat.scrollHeight;
     }
 
+    // Envoi de la requête
     async function ask() {
       const q = promptEl.value.trim();
       if (!q) return;
-      addBubble(q, 'user');
+
       promptEl.value = '';
       sendBtn.disabled = true;
 
+      addBubble(q, 'user');
+      showLoader();
+
+      let res, data;
       try {
-        const res  = await fetch('/api/chat', {
+        res  = await fetch('/api/chat', {
           method: 'POST',
           headers: {'Content-Type':'application/json'},
-          body: JSON.stringify({user_input: q})
+          body: JSON.stringify({ user_input: q })
         });
-        const data = await res.json();
+        data = await res.json();
+        hideLoader();
         if (res.ok && data.assistant_response) {
           addBubble(data.assistant_response, 'assistant');
         } else {
-          addBubble(`⚠️ ${data.error||res.status}`, 'assistant');
+          addBubble(`⚠️ ${data.error || res.status}`, 'assistant');
         }
       } catch {
+        hideLoader();
         addBubble('⚠️ Connexion échouée', 'assistant');
       } finally {
         sendBtn.disabled = false;
@@ -94,7 +121,7 @@
 
     sendBtn.addEventListener('click', ask);
     promptEl.addEventListener('keydown', e => {
-      if (e.key==='Enter' && !e.shiftKey) {
+      if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         ask();
       }
