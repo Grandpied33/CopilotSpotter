@@ -1,117 +1,115 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>SpotterCopilot</title>
-  <link rel="stylesheet" href="styles.css">
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div class="main-container">
-    <div class="chat-box">
+    <div class="chat-box" id="wrapper">
       <div id="intro">
-        Je suis SpotterCopilot, ton coach IA en musculation. Qu’est-ce que je peux faire pour toi ?
+        <span class="icon">🏋️‍♂️</span>
+        <span class="intro-text">Je suis <strong>SpotterCopilot</strong>, ton coach IA en musculation. Que souhaites-tu travailler aujourd’hui&nbsp;?</span>
       </div>
-      <div class="chat-container" id="chat">
-        <!-- bulles injectées ici -->
+      <div class="float-dumbbells">
+        <span>🏋️‍♂️</span><span>🏋️‍♂️</span><span>🏋️‍♂️</span>
       </div>
+      <div class="chat-container" id="chat"></div>
     </div>
   </div>
 
   <div class="input-area">
-    <textarea id="prompt" placeholder="Message Copilot"></textarea>
+    <textarea id="prompt" placeholder="Message SpotterCopilot"></textarea>
     <button id="send">Envoyer</button>
   </div>
 
   <script>
-    const intro    = document.getElementById('intro');
-    const chat     = document.getElementById('chat');
+    const intro = document.getElementById('intro');
+    const chat = document.getElementById('chat');
     const promptEl = document.getElementById('prompt');
-    const sendBtn  = document.getElementById('send');
-    let loaderElem = null;
+    const sendBtn = document.getElementById('send');
+    const wrapper = document.getElementById('wrapper');
+    let loaderElem, repInterval;
 
-    // Explosion du texte d'intro
     function explodeIntro() {
       const text = intro.textContent;
       intro.textContent = '';
       const chars = Array.from(text).map(ch => {
-        const span = document.createElement('span');
-        span.textContent = ch;
-        span.style.transition = 'transform 0.8s ease-out, opacity 0.8s ease-out';
-        intro.appendChild(span);
-        return span;
+        const s = document.createElement('span');
+        s.textContent = ch;
+        s.style.transition = 'transform 0.8s ease-out, opacity 0.8s ease-out';
+        intro.appendChild(s);
+        return s;
       });
       requestAnimationFrame(() => {
         chars.forEach(s => {
-          const dx  = (Math.random() - 0.5) * 200;
-          const dy  = (Math.random() - 0.5) * 200;
+          const dx = (Math.random() - 0.5) * 200;
+          const dy = (Math.random() - 0.5) * 200;
           const rot = (Math.random() - 0.5) * 720;
           s.style.transform = `translate(${dx}px,${dy}px) rotate(${rot}deg)`;
-          s.style.opacity   = '0';
+          s.style.opacity = '0';
         });
       });
       setTimeout(() => intro.style.display = 'none', 800);
     }
 
-    // Affiche le loader animé
-    function showLoader() {
+    function pumpMuscle() {
+      wrapper.classList.add('pump');
+      wrapper.addEventListener('animationend', () => wrapper.classList.remove('pump'), { once: true });
+    }
+
+    function showRepLoader() {
       loaderElem = document.createElement('div');
-      loaderElem.className = 'loader';
-      ['🏋️‍♂️','🤾‍♂️','🏌️‍♂️','🏃‍♂️'].forEach((emoji,i) => {
-        const span = document.createElement('span');
-        span.textContent = emoji;
-        span.style.animationDelay = `${i * 0.25}s`;
-        loaderElem.appendChild(span);
-      });
+      loaderElem.className = 'rep-loader';
+      loaderElem.innerHTML = `<span id="rep-count">0</span> reps`;
       chat.appendChild(loaderElem);
       chat.scrollTop = chat.scrollHeight;
+      let count = 0;
+      repInterval = setInterval(() => {
+        count = (count % 10) + 1;
+        document.getElementById('rep-count').textContent = count;
+      }, 200);
     }
 
-    // Masque le loader
-    function hideLoader() {
-      if (loaderElem) {
-        loaderElem.remove();
-        loaderElem = null;
-      }
+    function hideRepLoader() {
+      clearInterval(repInterval);
+      if (loaderElem) loaderElem.remove();
     }
 
-    // Injecte une bulle dans le chat
     function addBubble(text, who) {
-      const isFirst = intro && intro.style.display !== 'none';
-      if (isFirst) explodeIntro();
-      const div = document.createElement('div');
-      div.className = `bubble ${who}`;
-      div.textContent = text;
-      chat.appendChild(div);
+      if (intro && intro.style.display !== 'none') explodeIntro();
+      const b = document.createElement('div');
+      b.className = `bubble ${who}`;
+      b.textContent = text;
+      chat.appendChild(b);
       chat.scrollTop = chat.scrollHeight;
     }
 
-    // Envoi de la requête
     async function ask() {
       const q = promptEl.value.trim();
       if (!q) return;
-
       promptEl.value = '';
       sendBtn.disabled = true;
-
+      pumpMuscle();
       addBubble(q, 'user');
-      showLoader();
-
-      let res, data;
+      showRepLoader();
       try {
-        res  = await fetch('/api/chat', {
+        const res = await fetch('/api/chat', {
           method: 'POST',
-          headers: {'Content-Type':'application/json'},
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ user_input: q })
         });
-        data = await res.json();
-        hideLoader();
+        const data = await res.json();
+        hideRepLoader();
         if (res.ok && data.assistant_response) {
           addBubble(data.assistant_response, 'assistant');
         } else {
           addBubble(`⚠️ ${data.error || res.status}`, 'assistant');
         }
       } catch {
-        hideLoader();
+        hideRepLoader();
         addBubble('⚠️ Connexion échouée', 'assistant');
       } finally {
         sendBtn.disabled = false;
