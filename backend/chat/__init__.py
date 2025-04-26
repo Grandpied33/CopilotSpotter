@@ -65,9 +65,9 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         )
 
     except Exception:
-    logging.exception("Erreur inattendue dans SpotterCopilot")
-    return func.HttpResponse(
-        json.dumps({"error": "Une erreur interne est survenue."}),
-        status_code=500,
-        mimetype="application/json"
-    )
+        logging.exception("Erreur inattendue dans SpotterCopilot")
+        return func.HttpResponse(
+            json.dumps({"error": "Une erreur interne est survenue."}),
+            status_code=500,
+            mimetype="application/json"
+        )
