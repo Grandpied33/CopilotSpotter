@@ -1,4 +1,8 @@
-import os, json
+import os
+import json
+import traceback
+import logging
+
 import azure.functions as func
 from dotenv import load_dotenv
 from openai import AzureOpenAI
@@ -17,23 +21,23 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     try:
         # 1) Lecture de l’entrée
         body = req.get_json()
-        user_input = body.get("user_input","").strip()
+        user_input = body.get("user_input", "").strip()
         if not user_input:
             return func.HttpResponse("Champ 'user_input' manquant", status_code=400)
 
         # 2) Récupération des docs
         docs = retrieve_docs(user_input)
         # 3) Construction du contexte
-        context = "\n\n".join(d.get("content","") for d in docs)
+        context = "\n\n".join(d.get("content", "") for d in docs)
 
         # 4) Appel OpenAI
         messages = [
-            {"role":"system","content":
+            {"role": "system", "content":
              "Tu es SpotterCopilot, un assistant sportif. Ne répond que sur la musculation."},
-            {"role":"user","content":
+            {"role": "user", "content":
              f"Contexte :\n{context}\n\nQuestion : {user_input}"}
         ]
-        resp = chat_client.chat.completions.create(
+        resp = client.chat.completions.create(
             model=os.getenv("DEPLOYMENT"),
             messages=messages,
             temperature=0.7,
@@ -47,10 +51,12 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         )
 
     except Exception as e:
-        # Remonte la stack trace dans la réponse
+        # Remonte la stack trace dans la réponse pour débogage
         tb = traceback.format_exc()
-        error_message = f"⚠️ Exception levée : {e}\n\nTraceback:\n{tb}"
-        # Log dans Azure
-        logging = func.logging
-        logging.error(error_message)
-        return func.HttpResponse(error_message, status_code=500)
+        logging.error(tb)
+        error_payload = {"error": str(e), "trace": tb}
+        return func.HttpResponse(
+            json.dumps(error_payload),
+            mimetype="application/json",
+            status_code=500
+        )
