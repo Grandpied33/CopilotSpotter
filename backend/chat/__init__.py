@@ -2,7 +2,7 @@ import os, json
 import azure.functions as func
 from dotenv import load_dotenv
 from openai import AzureOpenAI
-from backend.chat.retrieve_docs import retrieve_docs
+from .retrieve_docs import retrieve_docs
 
 load_dotenv()
 
