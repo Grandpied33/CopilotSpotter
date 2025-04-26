@@ -9,6 +9,11 @@
       "name": "req",
       "methods": ["post"],
       "route": "chat"
+    },
+    {
+      "name": "$return",
+      "type": "http",
+      "direction": "out"
     }
   ]
 }
