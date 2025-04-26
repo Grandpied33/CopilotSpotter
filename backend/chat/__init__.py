@@ -54,7 +54,6 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
         resp = client.chat.completions.create(
             model=os.getenv("DEPLOYMENT"),
             messages=messages,
-            temperature=0.7,
             top_p=1.0,
             max_completion_tokens=1000
         )
