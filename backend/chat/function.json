@@ -1,4 +1,6 @@
 {
+  "scriptFile": "__init__.py",
+  "entryPoint": "main",
   "bindings": [
     {
       "authLevel": "anonymous",
@@ -7,11 +9,6 @@
       "name": "req",
       "methods": ["post"],
       "route": "chat"
-    },
-    {
-      "type": "http",
-      "direction": "out",
-      "name": "res"
     }
   ]
 }
