@@ -136,6 +136,19 @@ body::before {
   background: var(--text);
 }
 
+.known-bug {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-light); /* Couleur plus discrète */
+  line-height: 1.4;
+}
+.known-bug strong {
+  color: var(--accent1); /* Couleur pour mettre en évidence le titre */
+}
+.known-bug em {
+  font-style: italic;
+}
+
 /* Effet d'explosion */
 @keyframes explode {
     0% {
