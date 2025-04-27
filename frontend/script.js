@@ -11,7 +11,7 @@ const fbBtn    = document.getElementById('feedback-btn');
 const wrapper  = document.getElementById('wrapper');
 let loaderElem, repInterval;
 
-// formatte le programme en HTML lisible
+// Format program into readable HTML
 function formatProgram(text) {
   const lines = text.split('\n');
   let html = '', inList = false;
@@ -51,26 +51,25 @@ function explodeIntro() {
   });
   requestAnimationFrame(() => {
     chars.forEach(s => {
-      const dx = (Math.random()-0.5)*200;
-      const dy = (Math.random()-0.5)*200;
-      const rot= (Math.random()-0.5)*720;
-      s.style.transform = `translate(${dx}px,${dy}px) rotate(${rot}deg)`;
+      const dx = (Math.random() - 0.5) * 200; // Random horizontal displacement
+      const dy = (Math.random() - 0.5) * 200; // Random vertical displacement
+      const rot = (Math.random() - 0.5) * 720; // Random rotation
+      s.style.transform = `translate(${dx}px, ${dy}px) rotate(${rot}deg)`;
       s.style.opacity = '0';
     });
   });
-  setTimeout(()=> intro.style.display='none', 800);
+  setTimeout(() => intro.style.display = 'none', 800);
 }
 
 function addBubble(text, who) {
-  if (intro && intro.style.display!=='none') explodeIntro();
+  if (intro && intro.style.display !== 'none') explodeIntro();
   const b = document.createElement('div');
   b.className = `bubble ${who}`;
-  // si c'est un programme (numéros, tirets ou séparateurs), on formate
-  if (who==='assistant' && (/^[0-9].*|^─{5,}|^[•*-]/m).test(text)) {
+  // Format program if it's a structured response
+  if (who === 'assistant' && (/^[0-9].*|^─{5,}|^[•*-]/m).test(text)) {
     b.innerHTML = formatProgram(text);
-    // on affiche le bouton feedback
     fbBtn.style.display = 'inline-block';
-    fbBtn.onclick = ()=> {
+    fbBtn.onclick = () => {
       promptEl.value = 'feedback: ';
       promptEl.focus();
     };
@@ -88,42 +87,42 @@ async function ask() {
   sendBtn.disabled = true;
   fbBtn.style.display = 'none';
   wrapper.classList.add('pump');
-  wrapper.addEventListener('animationend',()=>wrapper.classList.remove('pump'),{once:true});
-  addBubble(q,'user');
+  wrapper.addEventListener('animationend', () => wrapper.classList.remove('pump'), { once: true });
+  addBubble(q, 'user');
 
-  // loader
+  // Loader
   loaderElem = document.createElement('div');
   loaderElem.className = 'rep-loader';
   loaderElem.innerHTML = `<span id="rep-count">0</span> reps`;
   chat.appendChild(loaderElem);
   chat.scrollTop = chat.scrollHeight;
-  let count=0;
-  repInterval = setInterval(()=>{
-    count=(count%10)+1;
+  let count = 0;
+  repInterval = setInterval(() => {
+    count = (count % 10) + 1;
     document.getElementById('rep-count').textContent = count;
-  },200);
+  }, 200);
 
   try {
-    const res = await fetch('/api/chat',{
-      method:'POST',
-      headers:{
-        'Content-Type':'application/json',
-        'X-User-Id':userId
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-User-Id': userId
       },
-      body: JSON.stringify({user_input:q})
+      body: JSON.stringify({ user_input: q })
     });
     const text = await res.text();
     clearInterval(repInterval);
     loaderElem.remove();
     if (!res.ok) {
-      addBubble(`⚠️ HTTP ${res.status} : ${text}`,'assistant');
+      addBubble(`⚠️ HTTP ${res.status} : ${text}`, 'assistant');
     } else {
-      addBubble(text,'assistant');
+      addBubble(text, 'assistant');
     }
   } catch {
     clearInterval(repInterval);
     loaderElem.remove();
-    addBubble('⚠️ Connexion échouée','assistant');
+    addBubble('⚠️ Connexion échouée', 'assistant');
   } finally {
     sendBtn.disabled = false;
     promptEl.focus();
@@ -131,8 +130,8 @@ async function ask() {
 }
 
 sendBtn.addEventListener('click', ask);
-promptEl.addEventListener('keydown', e=>{
-  if (e.key==='Enter' && !e.shiftKey) {
+promptEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault(); ask();
   }
 });
