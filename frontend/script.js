@@ -40,44 +40,72 @@ function formatProgram(text) {
 }
 
 function explodeIntro() {
-  const text = intro.textContent;
+  const intro = document.getElementById('intro');
+  const text  = intro.textContent;
   intro.textContent = '';
+
+  // 1) On crée un span par caractère
   const chars = Array.from(text).map(ch => {
     const s = document.createElement('span');
     s.textContent = ch;
+    s.classList.add('letter');              // pour cibler en CSS
+    // on prépare la transition
     s.style.transition = 'transform 0.8s ease-out, opacity 0.8s ease-out';
     intro.appendChild(s);
     return s;
   });
+
+  // 2) on attends le prochain repaint pour lancer l’anim
   requestAnimationFrame(() => {
     chars.forEach(s => {
-      const dx = (Math.random() - 0.5) * 200; // Random horizontal displacement
-      const dy = (Math.random() - 0.5) * 200; // Random vertical displacement
-      const rot = (Math.random() - 0.5) * 720; // Random rotation
-      s.style.transform = `translate(${dx}px, ${dy}px) rotate(${rot}deg)`;
-      s.style.opacity = '0';
+      const dx  = (Math.random() - 0.5) * 200;  // déplacement X aléatoire
+      const dy  = (Math.random() - 0.5) * 200;  // déplacement Y aléatoire
+      const rot = (Math.random() - 0.5) * 720;  // rotation aléatoire
+      s.style.transform = `translate(${dx}px,${dy}px) rotate(${rot}deg)`;
+      s.style.opacity   = '0';
     });
   });
-  setTimeout(() => intro.style.display = 'none', 800);
-}
 
+  // 3) après la transition, on masque le container
+  setTimeout(() => {
+    intro.style.display = 'none';
+  }, 800);
+}
+const textarea = document.querySelector('.input-area textarea');
+
+textarea.addEventListener('input', () => {
+  textarea.style.height = 'auto'; // Réinitialise la hauteur
+  textarea.style.height = `${textarea.scrollHeight}px`; // Ajuste à la hauteur du contenu
+});
+
+// Fonction pour ajouter une bulle de message
 function addBubble(text, who) {
-  if (intro && intro.style.display !== 'none') explodeIntro();
+  const intro = document.getElementById('intro');
+  if (intro && intro.style.display !== 'none') {
+    explodeIntro(); // Déclenche l'explosion si l'intro est encore visible
+  }
+
+  const chat = document.querySelector('.chat-container');
   const b = document.createElement('div');
   b.className = `bubble ${who}`;
-  // Format program if it's a structured response
+
+  // Formatage spécial pour les réponses structurées
   if (who === 'assistant' && (/^[0-9].*|^─{5,}|^[•*-]/m).test(text)) {
     b.innerHTML = formatProgram(text);
+
+    // Afficher le bouton de feedback
+    const fbBtn = document.getElementById('feedback-btn');
     fbBtn.style.display = 'inline-block';
     fbBtn.onclick = () => {
-      promptEl.value = 'feedback: ';
-      promptEl.focus();
+      textarea.value = 'feedback: ';
+      textarea.focus();
     };
   } else {
     b.textContent = text;
   }
+
   chat.appendChild(b);
-  chat.scrollTop = chat.scrollHeight;
+  chat.scrollTop = chat.scrollHeight; // Scroll automatique vers le bas
 }
 
 async function ask() {
