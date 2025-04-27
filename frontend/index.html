@@ -6,7 +6,6 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <!-- Float dumbbells en arrière-plan -->
   <div class="float-dumbbells">
     <span>🏋️‍♂️</span>
     <span>🏋️‍♀️</span>
@@ -17,7 +16,10 @@
     <div class="chat-box">
       <div id="intro">
         <span class="icon">🏋️‍♂️</span>
-        <span class="intro-text">Je suis <strong>SpotterCopilot</strong>, ton coach IA en musculation. Que souhaites-tu travailler aujourd’hui ?</span>
+        <span class="intro-text">
+          Je suis <strong>SpotterCopilot</strong>, ton coach IA en musculation.<br>
+          Que souhaites-tu travailler aujourd’hui ?
+        </span>
       </div>
       <div class="chat-container" id="chat">
         <!-- bulles injectées ici -->
@@ -26,6 +28,7 @@
   </div>
 
   <div class="input-area">
+    <button id="feedback-btn" style="display:none;">📝 Feedback</button>
     <textarea id="prompt" placeholder="Message Copilot"></textarea>
     <button id="send">Envoyer</button>
   </div>
