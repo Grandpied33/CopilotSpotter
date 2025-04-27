@@ -1,8 +1,7 @@
-# chat/__init__.py
 import os
 import json
 import logging
-
+from utils import sanitize_text
 import azure.functions as func
 from openai import AzureOpenAI
 from dotenv import load_dotenv
@@ -16,6 +15,12 @@ client = AzureOpenAI(
     api_version    = os.getenv("API_VERSION")
 )
 
+def sanitize_text(text):
+    """
+    Nettoie le texte en supprimant ou remplaçant les caractères sensibles.
+    """
+    # Exemple : remplace les caractères problématiques
+    return text.replace("sexe", "[contenu supprimé]").replace("intime", "[contenu supprimé]")
 
 def load_history(user_id):
     try:
