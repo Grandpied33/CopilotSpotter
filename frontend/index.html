@@ -1,28 +1,27 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>SpotterCopilot</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap"
-    rel="stylesheet"
-  />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="main-container">
-    <div class="chat-box" id="wrapper">
+  <!-- Float dumbbells en arrière-plan -->
+  <div class="float-dumbbells">
+    <span>🏋️‍♂️</span>
+    <span>🏋️‍♀️</span>
+    <span>🏋️</span>
+  </div>
+
+  <div class="main-container" id="wrapper">
+    <div class="chat-box">
       <div id="intro">
         <span class="icon">🏋️‍♂️</span>
-        <span class="intro-text">
-          Je suis <strong>SpotterCopilot</strong>, ton coach IA en musculation. Que souhaites-tu travailler aujourd’hui ?
-        </span>
+        <span class="intro-text">Je suis <strong>SpotterCopilot</strong>, ton coach IA en musculation. Que souhaites-tu travailler aujourd’hui ?</span>
       </div>
-      <div class="float-dumbbells">
-        <span>🏋️‍♂️</span><span>🏋️‍♂️</span><span>🏋️‍♂️</span>
+      <div class="chat-container" id="chat">
+        <!-- bulles injectées ici -->
       </div>
-      <div class="chat-container" id="chat"></div>
     </div>
   </div>
 
