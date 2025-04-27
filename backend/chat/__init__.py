@@ -7,7 +7,6 @@ import azure.functions as func
 from openai import AzureOpenAI
 from dotenv import load_dotenv
 from .retrieve_docs import retrieve_docs
-from azure.data.tables import TableServiceClient
 
 load_dotenv()
 
@@ -17,10 +16,6 @@ client = AzureOpenAI(
     api_version    = os.getenv("API_VERSION")
 )
 
-# table pour l’historique des poids
-table = TableServiceClient.from_connection_string(
-    os.getenv("AZURE_TABLE_CONN")
-).get_table_client(table_name="UserProgress")
 
 def load_history(user_id):
     try:
