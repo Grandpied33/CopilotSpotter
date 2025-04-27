@@ -33,7 +33,7 @@ html, body {
   flex-direction: column;
   height: calc(100vh - var(--input-height));
   align-items: center;
-  justify-content: flex-start;
+  justify-content: center;
 }
 
 .chat-box {
@@ -51,6 +51,11 @@ html, body {
   font-size: 1.2rem;
   color: var(--text-light);
   text-align: center;
+}
+
+#intro span {
+  display: inline-block;
+  will-change: transform, opacity;
 }
 
 .chat-container {
@@ -117,6 +122,7 @@ html, body {
   margin-right: 0.25rem;
 }
 
+/* Barre d’entrée */
 .input-area {
   position: fixed;
   bottom: 0;
@@ -133,6 +139,7 @@ html, body {
   border-radius: 1rem 1rem 0 0;
   height: var(--input-height);
   align-items: center;
+  z-index: 2;
 }
 
 .input-area textarea {
@@ -149,14 +156,8 @@ html, body {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-
-.input-area textarea::-webkit-scrollbar {
-  display: none;
-}
-
-.input-area textarea::placeholder {
-  color: var(--text-light);
-}
+.input-area textarea::-webkit-scrollbar { display: none; }
+.input-area textarea::placeholder { color: var(--text-light); }
 
 .input-area button {
   background: var(--accent1);
@@ -168,7 +169,6 @@ html, body {
   cursor: pointer;
   height: calc(100% - 2px);
 }
-
 .input-area button:disabled {
   opacity: 0.5;
   cursor: default;
@@ -180,26 +180,54 @@ html, body {
   border-top: 2px solid rgba(255,255,255,0.2);
   margin: 1rem 0;
 }
-
 .prog-step {
   margin: 1rem 0 0.5rem;
   font-weight: bold;
   font-size: 1.1rem;
 }
-
 .prog-list {
   list-style: disc inside;
   margin: 0 0 1rem 1rem;
 }
-
 .prog-text {
   margin: 0.5rem 0;
 }
 
-/* ——— Responsive tweaks ——— */
-@media (max-width: 640px) {
-  :root { --input-height: 56px; }
+/* — Floating dumbbells effect — */
+.float-dumbbells {
+  position: fixed;
+  top: 10%;
+  left: 50%;
+  width: 100%;
+  display: flex;
+  justify-content: space-around;
+  opacity: 0.05;
+  pointer-events: none;
+  z-index: -1;
+}
 
+.float-dumbbells span {
+  font-size: 3rem;
+  animation: floatUp 6s ease-in-out infinite;
+}
+
+.float-dumbbells span:nth-child(2) {
+  animation-delay: 2s;
+}
+.float-dumbbells span:nth-child(3) {
+  animation-delay: 4s;
+}
+
+@keyframes floatUp {
+  0%,100% { transform: translateY(0) scale(1); opacity: 0.05; }
+  50%    { transform: translateY(-20px) scale(1.1); opacity: 0.1; }
+}
+
+/* — Responsive tweaks — */
+@media (max-width: 640px) {
+  .main-container {
+    height: calc(100vh - var(--input-height));
+  }
   .chat-box {
     width: 100%;
     padding: 0.5rem 0;
