@@ -73,7 +73,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
             model                 = os.getenv("DEPLOYMENT"),
             messages              = messages,
             top_p                 = 1.0,
-            max_completion_tokens = 1000
+            max_completion_tokens = 2000
         )
         answer = resp.choices[0].message.content.strip()
 
