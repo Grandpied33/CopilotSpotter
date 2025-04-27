@@ -108,6 +108,35 @@ function addBubble(text, who) {
   chat.scrollTop = chat.scrollHeight; // Scroll automatique vers le bas
 }
 
+// Fonction pour extraire les exercices du texte généré par l'assistant
+function extractExercises(text) {
+  const exerciseRegex = /Exercice \d+ : (.+?)\nDescription : (.+?)\nSéries : (\d+)\nRépétitions : (.+?)\nCharge estimée : (.+?)\nRepos : (.+?)(?=\n|$)/g;
+  const exercises = [];
+  let match;
+
+  while ((match = exerciseRegex.exec(text)) !== null) {
+    exercises.push({
+      name: match[1],
+      description: match[2],
+      series: match[3],
+      repetitions: match[4],
+      charge: match[5],
+      rest: match[6],
+    });
+  }
+
+  return exercises;
+}
+
+// Fonction pour générer un template de feedback basé sur les exercices
+function generateFeedbackTemplate(exercises) {
+  let feedback = "feedback:\n";
+  exercises.forEach((exercise, index) => {
+    feedback += `${index + 1}. ${exercise.name} — ${exercise.series}×${exercise.repetitions} @${exercise.charge} — Commentaire : \n`;
+  });
+  return feedback;
+}
+
 async function ask() {
   const q = promptEl.value.trim();
   if (!q) return;
