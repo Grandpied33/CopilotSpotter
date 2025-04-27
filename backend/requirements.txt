@@ -7,3 +7,4 @@ azure-ai-projects
 azure-search-documents
 promptflow
 azure-data-tables
+utils
