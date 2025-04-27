@@ -1,55 +1,88 @@
 import os
+import json
 from openai import AzureOpenAI
 from dotenv import load_dotenv
+from azure.data.tables import TableServiceClient
+from backend.chat.retrieve_docs import retrieve_docs
 
 load_dotenv()
 
-endpoint = os.getenv("ENDPOINT")
-deployment = os.getenv("DEPLOYMENT")
-api_key = os.getenv("SUBSCRIPTION_KEY")
-api_version = os.getenv("API_VERSION")
-
 client = AzureOpenAI(
-    api_version=api_version,
-    azure_endpoint=endpoint,
-    api_key=api_key,
+    api_key        = os.getenv("SUBSCRIPTION_KEY"),
+    azure_endpoint = os.getenv("ENDPOINT"),
+    api_version    = os.getenv("API_VERSION")
 )
 
-print("🏋️ SpotterCopilot est prêt. Tape ce que tu veux bosser aujourd'hui ('exit' pour quitter)\n")
 
-table_service = TableServiceClient.from_connection_string(os.getenv("AZURE_TABLE_CONN"))
-table = table_service.get_table_client(table_name="UserProgress")
+def load_history(user_id):
+    try:
+        ent = table.get_entity(partition_key=user_id, row_key="history")
+        return json.loads(ent["Weights"])
+    except:
+        return {}
 
-while True:
-    user_input = input("🧑 > ")
-    if user_input.lower() in ["exit", "quit"]:
-        print("👋 À la prochaine séance !")
-        break
+def save_history(user_id, history):
+    table.upsert_entity({
+        "PartitionKey": user_id,
+        "RowKey":       "history",
+        "Weights":      json.dumps(history)
+    })
 
-    response = client.chat.completions.create(
-        messages=[
-            {
-                "role": "system",
-                "content": (
-                    "Tu es SpotterCopilot, un assistant intelligent d’entraînement sportif. "
-                    "Tu aides l’utilisateur à planifier ses séances de musculation. "
-                    "Tu proposes des exercices précis (avec reps, séries, charges estimées) en fonction du groupe musculaire ciblé, "
-                    "de l’objectif (force, volume, endurance), et de l’état du jour (fatigué, normal, en forme). "
-                    "**Tu ne réponds qu’à des sujets liés au sport, à la forme physique et à la santé.** "
-                    "Si une question sort de ce cadre (informatique, météo, relations, actu…), tu dois répondre poliment que tu ne peux pas aider sur ce sujet."
-                    "Sois clair, structuré, efficace."
-                )
-            },
-            {
-                "role": "user",
-                "content": user_input,
-            }
-        ],
-        max_completion_tokens=1000,
-        top_p=1.0,
-        model=deployment
-    )
+SYSTEM_PROMPT = """
+Tu es SpotterCopilot, coach IA expert en musculation et en sport.
+Tu réponds uniquement aux questions liées au sport, à la nutrition sportive et à la santé physique.
+Si l’utilisateur demande un entraînement en mentionnant un groupe musculaire et une durée en minutes, tu génères immédiatement un programme détaillé (échauffement, exercices, séries, répétitions, charge estimée, repos).
+Après le programme, tu invites l’utilisateur à envoyer son feedback de séance (ex. “feedback: 4×10 @20kg — facile”).
+Si l’utilisateur envoie un feedback, tu ajustes les charges pour la prochaine séance.
+Refuse poliment toute demande de conseils sur le code, la programmation, les relations amoureuses, la finance ou tout autre sujet hors sport et nutrition.
+"""
 
-    print("\n🤖 SpotterCopilot :\n")
-    print(response.choices[0].message.content)
-    print("\n────────────────────────────\n")
+def main():
+    user_id  = "default"
+    history  = load_history(user_id)
+    messages = [{"role":"system", "content": SYSTEM_PROMPT}]
+
+    print("🏋️ SpotterCopilot CLI – tape 'exit' pour quitter.\n")
+
+    while True:
+        user_input = input("🧑 > ").strip()
+        if user_input.lower() in ("exit", "quit"):
+            print("👋 À la prochaine séance !")
+            break
+
+        messages.append({"role":"user", "content": user_input})
+
+        mem_text = "\n".join(f"- {e}: {w} kg" for e, w in history.items())
+        docs = retrieve_docs(user_input)
+        ctx  = "\n\n".join(d["content"] for d in docs)
+
+        to_send = [messages[0]]
+        if mem_text:
+            to_send.append({"role":"system", "content": "Historique des poids :\n" + mem_text})
+        if ctx:
+            to_send.append({"role":"system", "content": "Contexte pertinent :\n" + ctx})
+        to_send.extend(messages[1:])
+
+        resp = client.chat.completions.create(
+            model                 = os.getenv("DEPLOYMENT"),
+            messages              = to_send,
+            top_p                 = 1.0,
+            max_completion_tokens = 2000
+        )
+        answer = resp.choices[0].message.content.strip()
+
+        print("\n🤖 SpotterCopilot :\n")
+        print(answer + "\n")
+
+        messages.append({"role":"assistant", "content": answer})
+
+        try:
+            parsed = json.loads(answer)
+            if isinstance(parsed, dict) and parsed.get("weights"):
+                history.update(parsed["weights"])
+                save_history(user_id, history)
+        except:
+            pass
+
+if __name__ == "__main__":
+    main()

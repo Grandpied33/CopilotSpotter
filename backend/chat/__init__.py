@@ -1,9 +1,13 @@
 # chat/__init__.py
-import os, json, logging
+import os
+import json
+import logging
+
 import azure.functions as func
 from openai import AzureOpenAI
 from dotenv import load_dotenv
 from .retrieve_docs import retrieve_docs
+from azure.data.tables import TableServiceClient
 
 load_dotenv()
 
@@ -13,34 +17,39 @@ client = AzureOpenAI(
     api_version    = os.getenv("API_VERSION")
 )
 
-SYSTEM_PROMPT_PROGRAM = """
-Tu es SpotterCopilot, coach IA expert en musculation.
-Quand l’utilisateur demande un entraînement (par ex. “je veux m’entraîner les bras”), tu dois :
-1) Demander son état de forme (en forme / normal / fatigué).
-2) Demander la durée dont il dispose.
-3) Proposer un programme clair et détaillé :
-   - Exercice : Squat
-     Séries : 4
-     Répétitions : 8–10
-     Charge : 60 kg
-     Repos : 120 s
-Puis termine par : « Dis-moi quand tu as fini ta séance ! »
-"""
+# table pour l’historique des poids
+table = TableServiceClient.from_connection_string(
+    os.getenv("AZURE_TABLE_CONN")
+).get_table_client(table_name="UserProgress")
 
-SYSTEM_PROMPT_FEEDBACK = """
-Tu es SpotterCopilot.
-L’utilisateur vient de terminer sa séance et te donne son feedback, par ex. :
-« Squat : 4×10 @ 60 kg — difficile  
-Presse : 3×12 @ 80 kg — facile »
-Analyse ce feedback et propose en texte clair comment ajuster les charges la prochaine fois.
+def load_history(user_id):
+    try:
+        ent = table.get_entity(partition_key=user_id, row_key="history")
+        return json.loads(ent["Weights"])
+    except:
+        return {}
+
+def save_history(user_id, history):
+    table.upsert_entity({
+        "PartitionKey": user_id,
+        "RowKey":       "history",
+        "Weights":      json.dumps(history)
+    })
+
+SYSTEM_PROMPT = """
+Tu es SpotterCopilot, coach IA expert en musculation et en sport.
+Tu réponds uniquement aux questions liées au sport, à la nutrition sportive et à la santé physique.
+Si l’utilisateur mentionne un groupe musculaire (ex. “biceps”, “jambes”, “pecs”…) et une durée en minutes (ex. “20 minutes”, “45 min”), tu considères que tu as toutes les infos nécessaires et tu génères immédiatement un programme détaillé (échauffement, exercices, séries, répétitions, charge estimée, repos).
+Après le programme, tu invites l’utilisateur à envoyer son feedback de séance (ex. “feedback: 4×10 @20kg — facile”).
+Si l’utilisateur envoie un feedback, tu ajustes les charges pour la prochaine séance.
+Refuse poliment toute demande hors sport et nutrition (code, amour, finance…).
 """
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
     try:
-        body        = req.get_json()
-        user_input  = body.get("user_input","").strip()
-        memory      = body.get("memory","").strip()
-        is_feedback = body.get("feedback", False)
+        body      = req.get_json()
+        user_input= body.get("user_input","").strip()
+        user_id   = req.headers.get("X-User-Id","default")
 
         if not user_input:
             return func.HttpResponse(
@@ -48,38 +57,42 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 status_code=400, mimetype="application/json"
             )
 
-        if not is_feedback:
-            docs    = retrieve_docs(user_input)
-            context = "\n\n".join(d.get("content","") for d in docs)
-            prompt = SYSTEM_PROMPT_PROGRAM
-            if memory:
-                prompt += "\nHistorique des poids :\n" + memory
-            if context:
-                prompt += "\n\nContexte :\n" + context
-            max_tokens = 2000
-        else:
-            prompt = SYSTEM_PROMPT_FEEDBACK + "\nFeedback :\n" + user_input
-            max_tokens = 500
+        # charge l'historique
+        history = load_history(user_id)
+        histo_text = "\n".join(f"- {e}: {w} kg" for e,w in history.items())
 
+        # contexte RAG
+        docs = retrieve_docs(user_input)
+        ctx  = "\n\n".join(d["content"] for d in docs)
+
+        # construit messages
+        messages = [{"role":"system","content":SYSTEM_PROMPT}]
+        if histo_text:
+            messages.append({"role":"system","content":"Historique des poids :\n" + histo_text})
+        if ctx:
+            messages.append({"role":"system","content":"Contexte pertinent :\n" + ctx})
+        messages.append({"role":"user","content":user_input})
+
+        # appel OpenAI
         resp = client.chat.completions.create(
             model                 = os.getenv("DEPLOYMENT"),
-            messages              = [
-                {"role":"system","content":prompt},
-                {"role":"user","content":user_input}
-            ],
+            messages              = messages,
             top_p                 = 1.0,
-            max_completion_tokens = max_tokens
+            max_completion_tokens = 1000
         )
         answer = resp.choices[0].message.content.strip()
 
-        return func.HttpResponse(
-            json.dumps({"assistant_response": answer}),
-            status_code=200, mimetype="application/json"
-        )
+        # sauvegarde JSON weights si l'IA en retourne
+        try:
+            parsed = json.loads(answer)
+            if isinstance(parsed, dict) and parsed.get("weights"):
+                history.update(parsed["weights"])
+                save_history(user_id, history)
+        except:
+            pass
 
-    except Exception:
+        return func.HttpResponse(answer, status_code=200)
+
+    except Exception as e:
         logging.exception("Erreur inattendue")
-        return func.HttpResponse(
-            json.dumps({"error":"Erreur interne."}),
-            status_code=500, mimetype="application/json"
-        )
+        return func.HttpResponse("Une erreur interne est survenue.", status_code=500)
