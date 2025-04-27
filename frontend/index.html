@@ -13,6 +13,33 @@
     <span>🏋️‍♀️</span>
     <span>🏋️</span>
   </div>
+    <div id="intro-modal" class="modal hidden">
+    <div class="modal-content">
+      <h2>Bienvenue dans l'ALPHA de SpotterCopilot</h2>
+      <p>Bonjour à tous,</p>
+      <p>
+        Merci de tester l'Alpha de SpotterCopilot. Cet assistant IA a été conçu dans le but de vous proposer des séances de sport à partir de vos envies et de votre forme. L'IA est censée retenir vos performances que vous pouvez lui donner afin que, sur les prochaines séances, elle optimise vos poids.
+      </p>
+      <h3>Le but de ce test est de :</h3>
+      <ul>
+        <li>Tester les réponses de l'IA</li>
+        <li>Vérifier qu'elle répond bien à vos attentes</li>
+        <li>Qu'elle s'adapte par rapport aux poids que vous donnez</li>
+        <li>Qu'elle ne boucle pas sur les mêmes exercices</li>
+      </ul>
+      <h3>Ce test ne porte pas sur :</h3>
+      <ul>
+        <li>L'interface</li>
+        <li>Les bugs graphiques</li>
+        <li>La performance de l'IA</li>
+      </ul>
+      <p>
+        Si vous trouvez un bug, n'hésitez pas à ajouter un commentaire et à m'envoyer les chats qui posent problème.
+      </p>
+      <p>Merci à vous.<br><strong>Hugo</strong></p>
+      <button id="close-intro-modal">Commencer</button>
+    </div>
+  </div>
 
   <div class="main-container" id="wrapper">
     <div class="chat-box">
@@ -37,7 +64,17 @@
       <button id="send">Envoyer</button>
     </div>
   </div>
-
+  <div id="bug-modal" class="modal hidden">
+    <div class="modal-content">
+      <h2>Report a Bug</h2>
+      <textarea id="bug-comment" placeholder="Décrivez le problème ici..."></textarea>
+      <button id="generate-mailto">Envoyer</button>
+      <button id="close-bug-modal">Fermer</button>
+    </div>
+  </div>
   <script src="script.js"></script>
+    <button id="report-bug-btn" class="report-bug">🐞 Report a bug</button>
+  
+  
 </body>
 </html>

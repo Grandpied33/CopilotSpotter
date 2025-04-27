@@ -3,12 +3,12 @@ if (!localStorage.getItem('spotter_userId')) {
   localStorage.setItem('spotter_userId', userId);
 }
 
-const intro    = document.getElementById('intro');
-const chat     = document.getElementById('chat');
+const intro = document.getElementById('intro');
+const chat = document.getElementById('chat');
 const promptEl = document.getElementById('prompt');
-const sendBtn  = document.getElementById('send');
-const fbBtn    = document.getElementById('feedback-btn');
-const wrapper  = document.getElementById('wrapper');
+const sendBtn = document.getElementById('send');
+const fbBtn = document.getElementById('feedback-btn');
+const wrapper = document.getElementById('wrapper');
 let loaderElem, repInterval;
 
 // Format program into readable HTML
@@ -41,59 +41,59 @@ function formatProgram(text) {
 
 function explodeIntro() {
   const intro = document.getElementById('intro');
-  const text  = intro.textContent;
+  const text = intro.textContent;
   intro.textContent = '';
 
-  // 1) On crée un span par caractère
+  // Create a span for each character
   const chars = Array.from(text).map(ch => {
     const s = document.createElement('span');
     s.textContent = ch;
-    s.classList.add('letter');              // pour cibler en CSS
-    // on prépare la transition
+    s.classList.add('letter'); // For CSS targeting
     s.style.transition = 'transform 0.8s ease-out, opacity 0.8s ease-out';
     intro.appendChild(s);
     return s;
   });
 
-  // 2) on attends le prochain repaint pour lancer l’anim
+  // Trigger animation
   requestAnimationFrame(() => {
     chars.forEach(s => {
-      const dx  = (Math.random() - 0.5) * 200;  // déplacement X aléatoire
-      const dy  = (Math.random() - 0.5) * 200;  // déplacement Y aléatoire
-      const rot = (Math.random() - 0.5) * 720;  // rotation aléatoire
+      const dx = (Math.random() - 0.5) * 200; // Random X displacement
+      const dy = (Math.random() - 0.5) * 200; // Random Y displacement
+      const rot = (Math.random() - 0.5) * 720; // Random rotation
       s.style.transform = `translate(${dx}px,${dy}px) rotate(${rot}deg)`;
-      s.style.opacity   = '0';
+      s.style.opacity = '0';
     });
   });
 
-  // 3) après la transition, on masque le container
+  // Hide the container after the animation
   setTimeout(() => {
     intro.style.display = 'none';
   }, 800);
 }
+
 const textarea = document.querySelector('.input-area textarea');
 
 textarea.addEventListener('input', () => {
-  textarea.style.height = 'auto'; // Réinitialise la hauteur
-  textarea.style.height = `${textarea.scrollHeight}px`; // Ajuste à la hauteur du contenu
+  textarea.style.height = 'auto'; // Reset height
+  textarea.style.height = `${textarea.scrollHeight}px`; // Adjust to content
 });
 
-// Fonction pour ajouter une bulle de message
+// Function to add a message bubble
 function addBubble(text, who) {
   const intro = document.getElementById('intro');
   if (intro && intro.style.display !== 'none') {
-    explodeIntro(); // Déclenche l'explosion si l'intro est encore visible
+    explodeIntro(); // Trigger intro animation if visible
   }
 
   const chat = document.querySelector('.chat-container');
   const b = document.createElement('div');
   b.className = `bubble ${who}`;
 
-  // Formatage spécial pour les réponses structurées
+  // Special formatting for structured responses
   if (who === 'assistant' && (/^[0-9].*|^─{5,}|^[•*-]/m).test(text)) {
     b.innerHTML = formatProgram(text);
 
-    // Afficher le bouton de feedback
+    // Show feedback button
     const fbBtn = document.getElementById('feedback-btn');
     fbBtn.style.display = 'inline-block';
     fbBtn.onclick = () => {
@@ -105,10 +105,10 @@ function addBubble(text, who) {
   }
 
   chat.appendChild(b);
-  chat.scrollTop = chat.scrollHeight; // Scroll automatique vers le bas
+  chat.scrollTop = chat.scrollHeight; // Auto-scroll to the bottom
 }
 
-// Fonction pour extraire les exercices du texte généré par l'assistant
+// Function to extract exercises from assistant's text
 function extractExercises(text) {
   const exerciseRegex = /Exercice \d+ : (.+?)\nDescription : (.+?)\nSéries : (\d+)\nRépétitions : (.+?)\nCharge estimée : (.+?)\nRepos : (.+?)(?=\n|$)/g;
   const exercises = [];
@@ -128,19 +128,64 @@ function extractExercises(text) {
   return exercises;
 }
 
-// Fonction pour générer un template de feedback basé sur les exercices
-function generateFeedbackTemplate(exercises) {
-  let feedback = "feedback:\n";
-  exercises.forEach((exercise, index) => {
-    feedback += `${index + 1}. ${exercise.name} — ${exercise.series}×${exercise.repetitions} @${exercise.charge} — Commentaire : \n`;
+document.addEventListener('DOMContentLoaded', () => {
+  const reportBugBtn = document.getElementById('report-bug-btn');
+  const bugModal = document.getElementById('bug-modal');
+  const closeBugModalBtn = document.getElementById('close-bug-modal');
+  const generateMailtoBtn = document.getElementById('generate-mailto');
+  const bugComment = document.getElementById('bug-comment');
+
+  // Open the modal
+  reportBugBtn.addEventListener('click', () => {
+    bugModal.classList.remove('hidden');
   });
-  return feedback;
-}
+
+  // Close the modal
+  closeBugModalBtn.addEventListener('click', () => {
+    bugModal.classList.add('hidden');
+  });
+
+  // Generate mailto link
+  generateMailtoBtn.addEventListener('click', () => {
+    const comment = bugComment.value.trim();
+    if (!comment) {
+      alert('Veuillez ajouter un commentaire avant d’envoyer.');
+      return;
+    }
+
+    const subject = encodeURIComponent('Bug Report - SpotterCopilot');
+    const body = encodeURIComponent(`Commentaire :\n${comment}`);
+    const mailtoLink = `mailto:hugo@monfouga.org?subject=${subject}&body=${body}`;
+
+    window.location.href = mailtoLink;
+
+    bugModal.classList.add('hidden');
+    bugComment.value = '';
+  });
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  const introModal = document.getElementById('intro-modal');
+  const closeIntroModalBtn = document.getElementById('close-intro-modal');
+
+  // Check if the user has already seen the modal
+  const hasSeenIntro = localStorage.getItem('hasSeenIntro');
+  if (!hasSeenIntro) {
+    introModal.classList.remove('hidden');
+  }
+
+  // Close the modal and save the state
+  closeIntroModalBtn.addEventListener('click', () => {
+    introModal.classList.add('hidden');
+    localStorage.setItem('hasSeenIntro', 'true');
+  });
+});
 
 async function ask() {
   const q = promptEl.value.trim();
   if (!q) return;
   promptEl.value = '';
+  promptEl.style.height = '2rem'; // Réinitialise la hauteur de l'input
   sendBtn.disabled = true;
   fbBtn.style.display = 'none';
   wrapper.classList.add('pump');
