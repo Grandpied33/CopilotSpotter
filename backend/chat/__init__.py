@@ -1,7 +1,6 @@
 import os
 import json
 import logging
-from utils import sanitize_text
 import azure.functions as func
 from openai import AzureOpenAI
 from dotenv import load_dotenv
@@ -63,14 +62,11 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
 
         # Contexte RAG
         docs = retrieve_docs(user_input)
-        ctx = sanitize_text("\n\n".join(d["content"] for d in docs))
 
         # Construit les messages
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
         if histo_text:
             messages.append({"role": "system", "content": "Historique des poids :\n" + histo_text})
-        if ctx:
-            messages.append({"role": "system", "content": "Contexte pertinent :\n" + ctx})
         messages.append({"role": "user", "content": user_input})
 
         logging.info("Messages envoyés à OpenAI : %s", json.dumps(messages, indent=2))
