@@ -255,3 +255,22 @@ body::before {
     opacity: 0.5;
     cursor: default;
 }
+
+.divider {
+    border: none;
+    border-top: 2px solid rgba(255,255,255,0.2);
+    margin: 1rem 0;
+  }
+  .prog-step {
+    margin: 1rem 0 0.5rem;
+    font-weight: bold;
+    font-size: 1.1rem;
+  }
+  .prog-list {
+    list-style: disc inside;
+    margin: 0 0 1rem 1rem;
+  }
+  .prog-text {
+    margin: 0.5rem 0;
+  }
+  
