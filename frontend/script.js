@@ -88,9 +88,32 @@ function addBubble(text, who) {
 
     fbBtn.style.display = 'inline-block';
     fbBtn.onclick = () => {
-      textarea.value = 'feedback: ';
-      textarea.focus();
-    };
+  // Cherche la dernière bulle assistant contenant un programme
+  const bubbles = Array.from(document.querySelectorAll('.bubble.assistant'));
+  const lastProgramBubble = bubbles.reverse().find(bub =>
+    /Exercice|@|kg|séries|répétitions|charge|haltère|poulie|dips|curl/i.test(bub.innerText)
+  );
+  let feedbackText = 'feedback: ';
+  if (lastProgramBubble) {
+    // Extraction avancée : on cherche le premier bloc d'exercice
+    const progText = lastProgramBubble.innerText;
+
+    // Regex pour trouver un exercice structuré
+    const exMatch = progText.match(
+      /([0-9]+)\s*(?:séries|x)\s*de\s*([0-9]+)[–-]?(?:\s*r?épétitions?)?.*?Charge estimée\s*[:：]?\s*([0-9]+)\s*kg/i
+    );
+    if (exMatch) {
+      // exMatch[1]=séries, exMatch[2]=répétitions, exMatch[3]=charge
+      feedbackText += `${exMatch[1]}x${exMatch[2]} @${exMatch[3]}kg — `;
+    } else {
+      // Fallback : prend la première ligne qui ressemble à un feedback
+      const line = progText.split('\n').find(l => /kg|@/.test(l));
+      if (line) feedbackText += line.replace(/^\s*[-•*]?\s*/, '') + ' — ';
+    }
+  }
+  textarea.value = feedbackText;
+  textarea.focus();
+};
   } else {
     b.textContent = text;
   }

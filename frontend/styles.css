@@ -124,6 +124,7 @@ body::before {
   padding: 0 1rem;
   scroll-padding-bottom: var(--input-height);
   max-height: calc(100vh - 150px);
+  padding-bottom: 6.5rem;
 }
 .chat-container::-webkit-scrollbar {
   width: 8px;
@@ -134,6 +135,11 @@ body::before {
 }
 .chat-container::-webkit-scrollbar-thumb:hover {
   background: var(--text);
+}
+@media (max-width: 640px) {
+  .chat-container {
+    padding-bottom: 8.5rem; /* Plus grand pour mobile si besoin */
+  }
 }
 
 .known-bug {
@@ -148,6 +154,8 @@ body::before {
 .known-bug em {
   font-style: italic;
 }
+
+
 
 /* Effet d'explosion */
 @keyframes explode {
