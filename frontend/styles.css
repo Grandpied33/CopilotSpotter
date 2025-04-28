@@ -471,3 +471,24 @@ body::before {
   max-width: 200px; /* Limite la largeur sur desktop */
   align-self: center;
 }
+
+.loader-dots {
+  font-size: 1.1rem;
+  letter-spacing: 1px;
+  display: inline-flex;
+  align-items: center;
+}
+.loader-dots .dot {
+  transition: opacity 0.2s;
+  font-weight: bold;
+  font-size: 1.3em;
+  color: var(--accent1, #f77);
+  opacity: 0.2;
+  margin-left: 2px;
+}
+.loader-hint {
+  font-size: 0.95em;
+  color: var(--text-light, #888);
+  margin-left: 0.5em;
+  font-style: italic;
+}

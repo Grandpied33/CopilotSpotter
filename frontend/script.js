@@ -139,16 +139,25 @@ async function ask() {
   wrapper.addEventListener('animationend', () => wrapper.classList.remove('pump'), { once: true });
   addBubble(q, 'user');
 
+    // Loader animé "Chargement (cela peut être long...)"
   loaderElem = document.createElement('div');
   loaderElem.className = 'rep-loader';
-  loaderElem.innerHTML = `<span id="rep-count">0</span> reps`;
+  loaderElem.innerHTML = `
+    <span class="loader-dots">
+      Chargement <span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
+      <span class="loader-hint">(cela peut être long...)</span>
+    </span>
+  `;
   chat.appendChild(loaderElem);
   chat.scrollTop = chat.scrollHeight;
-  let count = 0;
+
+  // Animation des points
+  let dotIndex = 0;
+  const dots = loaderElem.querySelectorAll('.dot');
   repInterval = setInterval(() => {
-    count = (count % 10) + 1;
-    document.getElementById('rep-count').textContent = count;
-  }, 200);
+    dots.forEach((d, i) => d.style.opacity = i <= dotIndex ? '1' : '0.2');
+    dotIndex = (dotIndex + 1) % dots.length;
+  }, 400);
 
   try {
     const res = await fetch('/api/chat', {
