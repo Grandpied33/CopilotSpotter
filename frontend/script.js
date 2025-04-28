@@ -99,6 +99,14 @@ function addBubble(text, who) {
   chat.scrollTop = chat.scrollHeight;
 }
 
+
+textarea.addEventListener('focus', () => {
+  setTimeout(() => {
+    textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 200);
+});
+
+
 // Fonction pour extraire les exercices du texte
 function extractExercises(text) {
   const exerciseRegex = /Exercice \d+ : (.+?)\nDescription : (.+?)\nSéries : (\d+)\nRépétitions : (.+?)\nCharge estimée : (.+?)\nRepos : (.+?)(?=\n|$)/g;

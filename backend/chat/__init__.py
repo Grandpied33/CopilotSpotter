@@ -8,6 +8,16 @@ from .retrieve_docs import retrieve_docs
 
 load_dotenv()
 
+import os
+import json
+import logging
+import azure.functions as func
+from openai import AzureOpenAI
+from dotenv import load_dotenv
+from .retrieve_docs import retrieve_docs
+
+load_dotenv()
+
 client = AzureOpenAI(
     api_key        = os.getenv("SUBSCRIPTION_KEY"),
     azure_endpoint = os.getenv("ENDPOINT"),
@@ -18,22 +28,25 @@ def sanitize_text(text):
     """
     Nettoie le texte en supprimant ou remplaçant les caractères sensibles.
     """
-    # Exemple : remplace les caractères problématiques
     return text.replace("sexe", "[contenu supprimé]").replace("intime", "[contenu supprimé]")
+
+# Simule une table en mémoire pour test local ou fallback si table Azure non dispo
+table = {}
 
 def load_history(user_id):
     try:
-        ent = table.get_entity(partition_key=user_id, row_key="history")
-        return json.loads(ent["Weights"])
-    except:
+        ent = table.get(user_id, {})
+        return json.loads(ent.get("Weights", "{}"))
+    except Exception:
         return {}
 
 def save_history(user_id, history):
-    table.upsert_entity({
+    table[user_id] = {
         "PartitionKey": user_id,
         "RowKey":       "history",
         "Weights":      json.dumps(history)
-    })
+    }
+
 SYSTEM_PROMPT = """
 Tu es SpotterCopilot, un coach IA expert en musculation et en sport.
 Tu réponds uniquement aux questions liées au sport, à la nutrition sportive et à la santé physique.
@@ -41,6 +54,7 @@ Si l’utilisateur mentionne un groupe musculaire (ex. “biceps”, “jambes�
 Après le programme, tu invites l’utilisateur à envoyer son feedback de séance (ex. “feedback: 4×10 @20kg — facile”).
 Si l’utilisateur envoie un feedback, tu ajustes les charges pour la prochaine séance.
 Refuse poliment toute demande hors sport et nutrition.
+BUG CONNU : La modération du contenu est assez sensible, merci de tenter des formulations différentes ou d'initier la conversation avant.
 """
 
 def main(req: func.HttpRequest) -> func.HttpResponse:
@@ -80,10 +94,10 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
                 max_completion_tokens=2000
             )
             answer = resp.choices[0].message.content.strip()
-        except openai.BadRequestError as e:
-            logging.error("Erreur de contenu filtré : %s", e)
+        except Exception as e:
+            logging.error("Erreur de contenu filtré ou autre : %s", e)
             return func.HttpResponse(
-                json.dumps({"error": "Le contenu généré a été filtré. Veuillez reformuler votre demande."}),
+                json.dumps({"error": "Le contenu généré a été filtré ou une erreur est survenue. Veuillez reformuler votre demande."}),
                 status_code=400,
                 mimetype="application/json"
             )
